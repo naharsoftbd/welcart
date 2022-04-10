@@ -27,10 +27,10 @@ class InstallData implements InstallDataInterface {
         /** @var CustomerSetup $customerSetup */
         $customerSetup = $this->customerSetupFactory->create(['setup' => $setup]);
 
-        $customerSetup->addAttribute(Customer::ENTITY, 'customer_otp', [
-            'label' => 'Customer OTP',
+        $customerSetup->addAttribute(Customer::ENTITY, 'customer_mobile', [
+            'label' => 'Customer Mobile',
             'input' => 'text',
-            'required' => false,
+            'required' => true,
             'sort_order' => 40,
             'visible' => true,
             'system' => false,
@@ -45,7 +45,7 @@ class InstallData implements InstallDataInterface {
         // Main program
         $n = 6;
         $otp = generateNumericOTP($n)
-        $attribute = $customerSetup->getEavConfig()->getAttribute('customer', 'customer_otp');
+        $attribute = $customerSetup->getEavConfig()->getAttribute('customer', 'customer_mobile');
         $attribute->setData('used_in_forms', ['adminhtml_customer', 'customer_account_create']);
         $attribute->save();
 

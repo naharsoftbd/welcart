@@ -5,7 +5,7 @@
  */
 declare(strict_types=1);
 
-namespace WelCart\Registration\Controller\Account;
+namespace WelCart\Registration\Plugin\Customer\Account;;
 
 use Magento\Customer\Api\CustomerRepositoryInterface as CustomerRepository;
 use Magento\Framework\App\Action\HttpPostActionInterface as HttpPostActionInterface;
@@ -40,7 +40,6 @@ use Magento\Framework\Exception\StateException;
 use Magento\Framework\Exception\InputException;
 use Magento\Framework\Data\Form\FormKey\Validator;
 use Magento\Customer\Controller\AbstractAccount;
-use Magento\Framework\Controller\ResultFactory;
 
 /**
  * Post create customer action
@@ -48,7 +47,7 @@ use Magento\Framework\Controller\ResultFactory;
  * @SuppressWarnings(PHPMD.TooManyFields)
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class CreatePost extends \Magento\Customer\Controller\Account\CreatePost
+class CreatePost extends AbstractAccount implements CsrfAwareActionInterface, HttpPostActionInterface
 {
     /**
      * @var \Magento\Customer\Api\AccountManagementInterface
@@ -179,8 +178,6 @@ class CreatePost extends \Magento\Customer\Controller\Account\CreatePost
      *
      * @SuppressWarnings(PHPMD.ExcessiveParameterList)
      */
-     protected $_resultFactory;
-     
     public function __construct(
         Context $context,
         Session $customerSession,
@@ -201,8 +198,7 @@ class CreatePost extends \Magento\Customer\Controller\Account\CreatePost
         DataObjectHelper $dataObjectHelper,
         AccountRedirect $accountRedirect,
         CustomerRepository $customerRepository,
-        Validator $formKeyValidator = null,
-        ResultFactory $ResultFactoryData
+        Validator $formKeyValidator = null
     ) {
         $this->session = $customerSession;
         $this->scopeConfig = $scopeConfig;
@@ -223,28 +219,7 @@ class CreatePost extends \Magento\Customer\Controller\Account\CreatePost
         $this->accountRedirect = $accountRedirect;
         $this->formKeyValidator = $formKeyValidator ?: ObjectManager::getInstance()->get(Validator::class);
         $this->customerRepository = $customerRepository;
-        $this->_resultFactory = $ResultFactoryData;
-        parent::__construct(
-        $context,
-        $customerSession,
-        $scopeConfig,
-        $storeManager,
-        $accountManagement,
-        $addressHelper,
-        $urlFactory,
-        $formFactory,
-        $subscriberFactory,
-        $regionDataFactory,
-        $addressDataFactory,
-        $customerDataFactory,
-        $customerUrl,
-        $registration,
-        $escaper,
-        $customerExtractor,
-        $dataObjectHelper,
-        $accountRedirect,
-        $customerRepository        
-        );
+        parent::__construct($context);
     }
 
     /**
@@ -400,39 +375,18 @@ class CreatePost extends \Magento\Customer\Controller\Account\CreatePost
             $extensionAttributes = $customer->getExtensionAttributes();
             $extensionAttributes->setIsSubscribed($this->getRequest()->getParam('is_subscribed', false));
             $customer->setExtensionAttributes($extensionAttributes);
-            
-            $cmMobile = $this->getRequest()->getParam('customer_mobile');
-            $mobile_otp = $this->getRequest()->getParam('mobile_otp');
-            $verify_otp = $this->getRequest()->getParam('verify_otp');
-            $otp_counter = $this->getRequest()->getParam('otp_counter');
-            $created_at = $this->getRequest()->getParam('created_at');
-            $otpVerify = $this->verifyNumericOTP($mobile_otp,$verify_otp,$otp_counter,$created_at); 
-            //var_dump($otp_counter);
-            //die();
-            if ($otpVerify['minis'] < 30 && $otpVerify['otp_counter']==4) {
-            	throw new InputException(__('Please try
-again after the specific time.'));
-            } 
-                      
-            if($cmMobile && !$otpVerify['verify_otp']){  
-              $n = 6;
-              $otp = $this->generateNumericOTP($n);
-              $firstName = $this->getRequest()->getParam('firstname');
-              $lastName = $this->getRequest()->getParam('lastname');
-              $cmEmail = $this->getRequest()->getParam('email');
-              $otpCounter = 1 + intval($otp_counter);
-              $createdAt = $created_at ? $created_at:strtotime("now");
-              $params = ['OTP' => $otp, 'email'=>$cmEmail, 'password'=>$password,'firstname'=>$firstName,'lastname'=>$lastName,'customer_mobile' =>$cmMobile,'otp_counter'=>$otpCounter,'created_at' => $createdAt];       
-              $resultRedirect->setPath('customer/account/create/',$params);
-              return $resultRedirect;       
-             }
-            $customer = $this->accountManagement
-                ->createAccount($customer, $password, $redirectUrl);
 
             $this->_eventManager->dispatch(
                 'customer_register_success',
                 ['account_controller' => $this, 'customer' => $customer]
             );
+            var_dump(true);
+            die();
+
+            $customer = $this->accountManagement
+                ->createAccount($customer, $password, $redirectUrl);
+
+            
             $confirmationStatus = $this->accountManagement->getConfirmationStatus($customer->getId());
             if ($confirmationStatus === AccountManagementInterface::ACCOUNT_CONFIRMATION_REQUIRED) {
                 $this->messageManager->addComplexSuccessMessage(
@@ -562,42 +516,4 @@ again after the specific time.'));
 
         return $message;
     }
-    
-    // Function to generate OTP
-    public function generateNumericOTP($n) {
-    
-    // Take a generator string which consist of
-    // all numeric digits
-    $generator = "1357902468";
-
-    // Iterate for n-times and pick a single character
-    // from generator and append it to $result
-    
-    // Login for generating a random character from generator
-    //   ---generate a random number
-    //   ---take modulus of same with length of generator (say i)
-    //   ---append the character at place (i) from generator to result
-
-    $result = "";
-
-    for ($i = 1; $i <= $n; $i++) {
-        $result .= substr($generator, (rand()%(strlen($generator))), 1);
-    }
-
-    // Return result
-    return $result;
-}
-   // OTP verification 
-   public function verifyNumericOTP($originalOTP,$verify_otp,$otp_counter,$created_at) {
-        $start = $created_at;
-        $end = strtotime('now');
-        $mins = ($end - $start) / 60;
-        $otp_counter++;
-        
-   	if($originalOTP===$verify_otp){
-   		return ['minis'=>$mins,'otp_counter'=>$otp_counter,'verify_otp' => $verify_otp];
-   	}else{
-   	  return ['minis'=>$mins,'otp_counter'=>$otp_counter,'verify_otp' => 0];
-   	}
-   }
 }

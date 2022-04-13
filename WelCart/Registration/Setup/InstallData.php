@@ -1,6 +1,6 @@
 <?php
 
-namespace WelCart\REgistration\Setup;
+namespace WelCart\Registration\Setup;
 
 use Magento\Customer\Model\Customer;
 use Magento\Customer\Setup\CustomerSetup;
@@ -43,40 +43,11 @@ class InstallData implements InstallDataInterface {
         // add attribute to form
         /** @var  $attribute */
         // Main program
-        $n = 6;
-        $otp = generateNumericOTP($n)
         $attribute = $customerSetup->getEavConfig()->getAttribute('customer', 'customer_mobile');
         $attribute->setData('used_in_forms', ['adminhtml_customer', 'customer_account_create']);
         $attribute->save();
 
         $setup->endSetup();
     }
-
-
-// Function to generate OTP
-function generateNumericOTP($n) {
-    
-    // Take a generator string which consist of
-    // all numeric digits
-    $generator = "1357902468";
-
-    // Iterate for n-times and pick a single character
-    // from generator and append it to $result
-    
-    // Login for generating a random character from generator
-    //   ---generate a random number
-    //   ---take modulus of same with length of generator (say i)
-    //   ---append the character at place (i) from generator to result
-
-    $result = "";
-
-    for ($i = 1; $i <= $n; $i++) {
-        $result .= substr($generator, (rand()%(strlen($generator))), 1);
-    }
-
-    // Return result
-    return $result;
-}
-
 
 }
